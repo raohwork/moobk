@@ -1,3 +1,5 @@
+![moobk logo](https://raw.githubusercontent.com/raohwork/moobk/master/moobk.png)
+
 moobk is a CoW filesystem backup tool. Currently only btrfs/zfs are supported.
 
 # Install
