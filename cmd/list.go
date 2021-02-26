@@ -25,8 +25,9 @@ import (
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List recognized snapshots in the repo",
+	Use:     "list",
+	Aliases: []string{"ls", "l"},
+	Short:   "List recognized snapshots in the repo",
 	Long: `List recognized snapshots in the repo.
 
 moobk recognizes snapshot by just naming convention: "name"-"timestamp". If it does

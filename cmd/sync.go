@@ -26,6 +26,7 @@ import (
 
 // syncCmd represents the list command
 var syncCmd = &cobra.Command{
+	Aliases:   []string{"send", "t", "trans", "transfer", "s"},
 	Use:       "sync remote",
 	Short:     "Transfers local snapshots to remote",
 	Long:      `sync send snapshots that exist in local but missing in remote.`,

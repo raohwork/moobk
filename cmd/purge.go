@@ -25,8 +25,9 @@ import (
 
 // purgeCmd represents the purge command
 var purgeCmd = &cobra.Command{
-	Use:   "purge remote [reserve]",
-	Short: "Purge snapshots from local according to remote",
+	Aliases: []string{"p", "d", "del", "delete", "rm", "remove"},
+	Use:     "purge remote [reserve]",
+	Short:   "Purge snapshots from local according to remote",
 	Long: `purge deletes snapshots that exist in both local and remote.
 
 The argument "reserve" can be:

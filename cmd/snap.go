@@ -23,8 +23,9 @@ import (
 
 // snapCmd represents the list command
 var snapCmd = &cobra.Command{
-	Use:   "snap target [name]",
-	Short: "Take snapshot",
+	Aliases: []string{"c", "create", "a", "add", "snapshot"},
+	Use:     "snap target [name]",
+	Short:   "Take snapshot",
 	Long: `Take a snapshot of specified target, named it as name, store it to repo
 
 Some drivers might have restrictions about where to store. Run "moobk driver" for more info.
