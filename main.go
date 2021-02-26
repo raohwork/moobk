@@ -15,7 +15,9 @@
 
 package main
 
-import "github.com/raohwork/moobk/cmd"
+import (
+	"github.com/raohwork/moobk/cmd"
+)
 
 func main() {
 	cmd.Execute()

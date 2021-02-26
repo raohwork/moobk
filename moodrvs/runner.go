@@ -16,6 +16,7 @@
 package moodrvs
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -55,12 +56,40 @@ func addRunner(n string, f func(*url.URL, string) (Runner, error)) {
 	availableRunner[n] = f
 }
 
+// alias support
+var aliases = map[string]string{}
+
+// SetAlias sets repo alias
+func SetAlias(a map[string]string) {
+	if a != nil {
+		aliases = a
+	}
+}
+
 // GetRunner creates a runner by providing driver and repo specs
 func GetRunner(uri, fs string) (ret Runner, err error) {
 	u, err := url.Parse(uri)
+	if err == nil && u.Scheme != "" {
+		return getRunner(u, fs)
+	}
+
+	// maybe alias?
+	real, ok := aliases[uri]
+	if !ok {
+		// not alias
+		err = errors.New("unsupported repo: " + uri)
+		return
+	}
+
+	u, err = url.Parse(real)
 	if err != nil {
 		return
 	}
+
+	return getRunner(u, fs)
+}
+
+func getRunner(u *url.URL, fs string) (ret Runner, err error) {
 	s := strings.ToLower(u.Scheme)
 	x, ok := availableRunner[s]
 	if !ok {

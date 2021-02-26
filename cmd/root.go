@@ -15,7 +15,11 @@
 package cmd
 
 import (
+	"os"
+
+	"github.com/raohwork/moobk/moodrvs"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 var cfgFile string
@@ -36,14 +40,62 @@ Then, write an udev rule to transfer new snapshots to external storage (and dele
   moobk sync -t btrfs -r local:///.root.backup local:///path/to/external/storage
   moobk purge -t btrfs -r local:///.root.backup local:///path/to/external/storage 2w
 
-Run "moobk help" for further info.
+Those are long lines suitable for scripts which only write once. If you like to run it manually (like, for testing), moobk supports repo alias. Create a file named ".moobk.yaml" in your home directory (or /root if you run moobk with sudo) with following lines
+
+me: local:///path/to/local/backup
+nas: ssh+sudo://user@nas.my.home/path/to/backup?ssh_i=/home/user/.ssh/id_ed25519
+usb: local:///path/to/usb/backup
+
+Then you can run
+
+  moobk list -r me     # equals to moobk list -r local:///path/to/local/backup
+  moobk sync -r me nas
+
+To get some idea about what "repo" is, run "moobk repo". You might also want to try "moobk driver".
+
+moobk is free software: it is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
 `,
 	SuggestionsMinimumDistance: 3,
 	Version:                    "0.0.1",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		loadAliases()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&aliasFile, "alias", "a", "", "specify yaml file stores repo alias, default to $HOME/.moobk.yaml (watchout if use with sudo)")
+}
+
+var aliasFile string
+
+// skip if failed
+func loadAliases() {
+	if aliasFile == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return
+		}
+		aliasFile = home + "/.moobk.yaml"
+	}
+
+	f, err := os.Open(aliasFile)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	var a map[string]string
+	dec := yaml.NewDecoder(f)
+	if err = dec.Decode(&a); err != nil {
+		return
+	}
+
+	moodrvs.SetAlias(a)
 }
