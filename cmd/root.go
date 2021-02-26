@@ -30,7 +30,7 @@ var rootCmd = &cobra.Command{
 	Short: "moobk is a simple tool helps you to backup CoW filesystem",
 	Long: `moobk, stands for "MOOOOOOOOOOO Backup", is a simple tool to backup CoW filesystems. Currently only btrfs and zfs are supported.
 
-moobk aims to help you automating daily backup work with ease. Say you have a laptop with two btrfs subvolumes mounted at root and /home, and an btrfs-formatted external storage. You may periodically run this to take snapshot (like, hourly):
+moobk aims to help you automating daily backup work with ease. It's roughly a frontend of zfs/btrfs. Say you have a laptop with two btrfs subvolumes mounted at root and /home, and an btrfs-formatted external storage. You may periodically run this to take snapshot (like, hourly):
 
   moobk snap -t btrfs -r local:///.backup / rootfs
   moobk snap -t btrfs -r local:///.backup /home
