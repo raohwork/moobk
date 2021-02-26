@@ -60,7 +60,6 @@ moobk sync -t btrfs -r ssh+sudo://user@1.2.3.4:port/data/backup?ssh_4 ssh+sudo:/
 
 # WARNING
 
-- The order of command/options/arguments is extremly strict. Still searching for a good CLI framework to use (stability/learning curve/license are considered)
 - It does not know source path from snapshot, you have to remember it by yourself. Write simple shell script for automation is suggested.
 - Snapshot naming scheme is fixed.
 - It compares snapshots only by their name and timestamp.
