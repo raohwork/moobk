@@ -13,75 +13,61 @@
 // You should have received a copy of the GNU General Public License
 // along with moobk.  If not, see <https://www.gnu.org/licenses/>.
 
-package cmds
+package cmd
 
 import (
 	"fmt"
 	"io"
-	gsync "sync"
+	"sync"
 
 	"github.com/raohwork/moobk/moodrvs"
+	"github.com/spf13/cobra"
 )
 
-type sync struct{}
+// syncCmd represents the list command
+var syncCmd = &cobra.Command{
+	Use:       "sync remote",
+	Short:     "Transfers local snapshots to remote",
+	Long:      `sync send snapshots that exist in local but missing in remote.`,
+	ValidArgs: []string{"remote"},
+	Args:      cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		local, err := syncFlags.Repo()
+		if err != nil {
+			return fmt.Errorf("cannot init local repo: %w", err)
+		}
 
-func init() { register(sync{}) }
+		remote, err := moodrvs.GetRunner(args[0], local.DriverName())
+		if err != nil {
+			return fmt.Errorf("cannot init remote repo: %w", err)
+		}
 
-func (_ sync) Name() string { return "sync" }
-func (_ sync) Desc() string { return "sync snapshots from local to remote." }
-func (_ sync) Help() {
-	fmt.Print(`sync [-name name] remote_repo
+		lSnaps, err := local.Snapshots()
+		if err != nil {
+			return fmt.Errorf("cannot gather snapshot info in local: %w", err)
+		}
+		lSnaps = moodrvs.Filter(lSnaps, syncFlags.Name, 0, "")
+		if len(lSnaps) == 0 {
+			// nothing to do
+			return
+		}
 
-sync send snapshots that exist in local but missing in remote.
+		rSnaps, err := remote.Snapshots()
+		if err != nil {
+			return fmt.Errorf("cannot gather snapshot info in remote: %w", err)
+		}
+		rSnaps = moodrvs.Filter(rSnaps, syncFlags.Name, 0, "")
 
--name string  Optional filter. Sends only matching snapshot.
-remote_repo   Repo to receive missing snapshots, see moobk help repo for detail.
-`)
-}
+		diffs := moodrvs.Diff(lSnaps, rSnaps)
+		for _, diff := range diffs {
+			transfer(local, remote, diff)
+		}
 
-func (s sync) Exec(args []string) (ret int) {
-	var name string
-	flagSet.StringVar(&name, "name", "", "")
-	opt := mustG(args)
-	if !want(1, opt.args) {
-		s.Help()
-		return 1
-	}
-
-	local := opt.repo
-	remote, err := moodrvs.GetRunner(opt.args[0], local.DriverName())
-	if err != nil {
-		fmt.Println("cannot connect to remote: ", err)
-		return 1
-	}
-
-	lSnaps, err := local.Snapshots()
-	if err != nil {
-		fmt.Println("cannot gather snapshot info in local: ", err)
-		return 1
-	}
-	lSnaps = moodrvs.Filter(lSnaps, name, 0, "")
-	if len(lSnaps) == 0 {
-		// nothing to do
 		return
-	}
-
-	rSnaps, err := remote.Snapshots()
-	if err != nil {
-		fmt.Println("cannot gather snapshot info in remote: ", err)
-		return 1
-	}
-	rSnaps = moodrvs.Filter(rSnaps, name, 0, "")
-
-	diffs := moodrvs.Diff(lSnaps, rSnaps)
-	for _, diff := range diffs {
-		s.transfer(local, remote, diff)
-	}
-
-	return
+	},
 }
 
-func (s sync) transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error) {
+func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error) {
 	if len(diff.Missing) < 1 {
 		// nothing to do
 		return
@@ -105,7 +91,7 @@ func (s sync) transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (
 
 		r, w := io.Pipe()
 		var rerr, werr error
-		wg := gsync.WaitGroup{}
+		wg := sync.WaitGroup{}
 		wg.Add(2)
 		go func() {
 			werr = lRepo.Send(*base, s, w)
@@ -138,4 +124,16 @@ func (s sync) transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (
 	}
 
 	return
+}
+
+var syncFlags = struct {
+	repoFlags
+	Name string
+}{}
+
+func init() {
+	rootCmd.AddCommand(syncCmd)
+
+	syncFlags.Bind(syncCmd)
+	syncCmd.Flags().StringVarP(&syncFlags.Name, "name", "n", "", "optional filter. Sends only matching snapshot")
 }

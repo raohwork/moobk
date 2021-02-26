@@ -13,20 +13,21 @@
 // You should have received a copy of the GNU General Public License
 // along with moobk.  If not, see <https://www.gnu.org/licenses/>.
 
-package cmds
+package cmd
 
 import (
 	"fmt"
+
+	"github.com/spf13/cobra"
 )
 
-type driver struct{}
-
-func init() { register(driver{}) }
-
-func (_ driver) Name() string { return "driver" }
-func (_ driver) Desc() string { return `Explains what is "driver"` }
-func (_ driver) Help() {
-	fmt.Print(`moobk supports two CoWfs now: btrfs and zfs
+// driverCmd represents the driver command
+var driverCmd = &cobra.Command{
+	Use:   "driver",
+	Short: "Describes what 'driver' is",
+	Long:  `Show documentation about what "driver" is, which driver is supported, and its key behavier.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Print(`moobk supports two CoWfs now: btrfs and zfs
 
 moobk *DOES NOT* interact with the filesystem directly. It executes utilities
 provided by the fs to do management job (You have to install it by yourself). There's
@@ -71,9 +72,9 @@ a piece of code to "translate" jobs to command executions, which calls "driver",
       - Delete: enables "-r"
       - Send:   enables "-R"
 `)
+	},
 }
 
-func (h driver) Exec(args []string) (ret int) {
-	h.Help()
-	return
+func init() {
+	rootCmd.AddCommand(driverCmd)
 }

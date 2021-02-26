@@ -13,10 +13,32 @@
 // You should have received a copy of the GNU General Public License
 // along with moobk.  If not, see <https://www.gnu.org/licenses/>.
 
-package main
+package cmd
 
-import "github.com/raohwork/moobk/cmd"
+import (
+	"github.com/spf13/cobra"
+)
 
-func main() {
-	cmd.Execute()
+// internalTestCmd represents the internalTest command
+var internalTestCmd = &cobra.Command{
+	Use:   "test target",
+	Short: "Test wraps COW.Test() method",
+	Long: `as the name suggests, it is for internal use only.
+
+End-users *SHOULD NEVER* use this directly.
+`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		repo, err := internalFlags.Repo()
+		if err != nil {
+			intWriteErr(err)
+			return
+		}
+
+		intWriteJson(repo.Test(args[0]))
+	},
+}
+
+func init() {
+	internalCmd.AddCommand(internalTestCmd)
 }

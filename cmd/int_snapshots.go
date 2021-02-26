@@ -13,5 +13,31 @@
 // You should have received a copy of the GNU General Public License
 // along with moobk.  If not, see <https://www.gnu.org/licenses/>.
 
-// Package cmds defines all cli commands
-package cmds
+package cmd
+
+import (
+	"github.com/spf13/cobra"
+)
+
+// internalSnapshotsCmd represents the internalSnapshots command
+var internalSnapshotsCmd = &cobra.Command{
+	Use:   "snapshots",
+	Short: "Snapshots wraps COW.Snapshots() method",
+	Long: `as the name suggests, it is for internal use only.
+
+End-users *SHOULD NEVER* use this directly.
+`,
+	Run: func(cmd *cobra.Command, args []string) {
+		repo, err := internalFlags.Repo()
+		if err != nil {
+			intWriteErr(err)
+			return
+		}
+
+		intWriteJson(repo.Snapshots())
+	},
+}
+
+func init() {
+	internalCmd.AddCommand(internalSnapshotsCmd)
+}
