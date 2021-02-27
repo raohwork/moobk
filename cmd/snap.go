@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/raohwork/moobk/moodrvs"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +41,7 @@ Some drivers might have restrictions about where to store. Run "moobk driver" fo
 			name = args[1]
 		}
 
-		repo, err := snapFlags.Repo()
+		repo, err := moodrvs.GetRunner(snapFlags.Repo, fs)
 		if err != nil {
 			return
 		}
@@ -55,10 +56,12 @@ Some drivers might have restrictions about where to store. Run "moobk driver" fo
 	},
 }
 
-var snapFlags = repoFlags{}
+var snapFlags = struct {
+	Repo string
+}{}
 
 func init() {
 	rootCmd.AddCommand(snapCmd)
 
-	snapFlags.Bind(snapCmd)
+	rootCmd.Flags().StringVarP(&snapFlags.Repo, "repo", "r", "", "specify repository")
 }

@@ -26,7 +26,7 @@ import (
 // purgeCmd represents the purge command
 var purgeCmd = &cobra.Command{
 	Aliases: []string{"p", "d", "del", "delete", "rm", "remove"},
-	Use:     "purge remote [reserve]",
+	Use:     "purge local remote [reserve]",
 	Short:   "Purge snapshots from local according to remote",
 	Long: `purge deletes snapshots that exist in both local and remote.
 
@@ -38,14 +38,15 @@ The argument "reserve" can be:
 purge will never delete orphan snapshot. Latest synced snapshot is also preserved.
 If you specify 1 for reserve, there will be at most 2 synced snapshots.
 `,
-	ValidArgs: []string{"reserve\t[0-9]+([hdwm])"},
+	ValidArgs: []string{"local", "remote", "reserve\t[0-9]+([hdwm])"},
+	Args:      cobra.RangeArgs(2, 3),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		local, err := purgeFlags.Repo()
+		local, err := moodrvs.GetRunner(args[0], fs)
 		if err != nil {
 			return fmt.Errorf("cannot connect to local: %w", err)
 		}
 
-		remote, err := moodrvs.GetRunner(args[0], local.DriverName())
+		remote, err := moodrvs.GetRunner(args[1], fs)
 		if err != nil {
 			return fmt.Errorf("cannot connect to remote: %w", err)
 		}

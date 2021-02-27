@@ -25,7 +25,7 @@ import (
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
-	Use:     "list",
+	Use:     "list repo",
 	Aliases: []string{"ls", "l"},
 	Short:   "List recognized snapshots in the repo",
 	Long: `List recognized snapshots in the repo.
@@ -35,8 +35,10 @@ not recognize other snapshot you made manually, that't totally normal.
 
 Currently the order is hard-coded. Custom sorting might be added in later version.
 `,
+	ValidArgs: []string{"repo"},
+	Args:      cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		repo, err := listFlags.Repo()
+		repo, err := moodrvs.GetRunner(args[0], fs)
 		if err != nil {
 			return
 		}
@@ -61,7 +63,6 @@ Currently the order is hard-coded. Custom sorting might be added in later versio
 }
 
 var listFlags = struct {
-	repoFlags
 	Name  string
 	Count uint
 	T     string
@@ -70,7 +71,6 @@ var listFlags = struct {
 func init() {
 	rootCmd.AddCommand(listCmd)
 
-	listFlags.Bind(listCmd)
 	f := listCmd.Flags()
 	f.StringVarP(&listFlags.Name, "name", "n", "", "lists only snapshots with exactly same name")
 	f.UintVarP(&listFlags.Count, "count", "c", 0, "latest n snapshots (0 for all, which is default)")

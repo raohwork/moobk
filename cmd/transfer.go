@@ -27,18 +27,18 @@ import (
 // transferCmd represents the list command
 var transferCmd = &cobra.Command{
 	Aliases:   []string{"t", "trans", "sync", "send", "s"},
-	Use:       "transfer remote",
+	Use:       "transfer local remote",
 	Short:     "Transfers local snapshots to remote",
 	Long:      `transfer snapshots that exist in local but missing in remote.`,
-	ValidArgs: []string{"remote"},
-	Args:      cobra.ExactArgs(1),
+	ValidArgs: []string{"local", "remote"},
+	Args:      cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		local, err := transferFlags.Repo()
+		local, err := moodrvs.GetRunner(args[0], fs)
 		if err != nil {
 			return fmt.Errorf("cannot init local repo: %w", err)
 		}
 
-		remote, err := moodrvs.GetRunner(args[0], local.DriverName())
+		remote, err := moodrvs.GetRunner(args[1], fs)
 		if err != nil {
 			return fmt.Errorf("cannot init remote repo: %w", err)
 		}
@@ -128,13 +128,11 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 }
 
 var transferFlags = struct {
-	repoFlags
 	Name string
 }{}
 
 func init() {
 	rootCmd.AddCommand(transferCmd)
 
-	transferFlags.Bind(transferCmd)
 	transferCmd.Flags().StringVarP(&transferFlags.Name, "name", "n", "", "optional filter. Transfers only matching snapshot")
 }

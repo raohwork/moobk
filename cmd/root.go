@@ -70,10 +70,13 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&aliasFile, "alias", "a", "", "specify yaml file stores repo alias, default to $HOME/.moobk.yaml (watchout if use with sudo)")
+	f := rootCmd.PersistentFlags()
+	f.StringVarP(&aliasFile, "alias", "a", "", "specify yaml file stores repo alias, default to $HOME/.moobk.yaml (watchout if use with sudo)")
+	f.StringVarP(&fs, "type", "t", "btrfs", "driver type, see 'moobk driver' for detail")
 }
 
 var aliasFile string
+var fs string
 
 // skip if failed
 func loadAliases() {
