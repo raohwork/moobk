@@ -24,16 +24,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// syncCmd represents the list command
-var syncCmd = &cobra.Command{
-	Aliases:   []string{"send", "t", "trans", "transfer", "s"},
-	Use:       "sync remote",
+// transferCmd represents the list command
+var transferCmd = &cobra.Command{
+	Aliases:   []string{"t", "trans", "sync", "send", "s"},
+	Use:       "transfer remote",
 	Short:     "Transfers local snapshots to remote",
-	Long:      `sync send snapshots that exist in local but missing in remote.`,
+	Long:      `transfer snapshots that exist in local but missing in remote.`,
 	ValidArgs: []string{"remote"},
 	Args:      cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		local, err := syncFlags.Repo()
+		local, err := transferFlags.Repo()
 		if err != nil {
 			return fmt.Errorf("cannot init local repo: %w", err)
 		}
@@ -47,7 +47,7 @@ var syncCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("cannot gather snapshot info in local: %w", err)
 		}
-		lSnaps = moodrvs.Filter(lSnaps, syncFlags.Name, 0, "")
+		lSnaps = moodrvs.Filter(lSnaps, transferFlags.Name, 0, "")
 		if len(lSnaps) == 0 {
 			// nothing to do
 			return
@@ -57,7 +57,7 @@ var syncCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("cannot gather snapshot info in remote: %w", err)
 		}
-		rSnaps = moodrvs.Filter(rSnaps, syncFlags.Name, 0, "")
+		rSnaps = moodrvs.Filter(rSnaps, transferFlags.Name, 0, "")
 
 		diffs := moodrvs.Diff(lSnaps, rSnaps)
 		for _, diff := range diffs {
@@ -127,14 +127,14 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 	return
 }
 
-var syncFlags = struct {
+var transferFlags = struct {
 	repoFlags
 	Name string
 }{}
 
 func init() {
-	rootCmd.AddCommand(syncCmd)
+	rootCmd.AddCommand(transferCmd)
 
-	syncFlags.Bind(syncCmd)
-	syncCmd.Flags().StringVarP(&syncFlags.Name, "name", "n", "", "optional filter. Sends only matching snapshot")
+	transferFlags.Bind(transferCmd)
+	transferCmd.Flags().StringVarP(&transferFlags.Name, "name", "n", "", "optional filter. Transfers only matching snapshot")
 }
