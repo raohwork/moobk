@@ -35,8 +35,9 @@ The argument "reserve" can be:
     [0-9]+[hdwm]:  do not delete snapshots newer than n hour/day/week/month ago from
                    now.
 
-purge will never delete orphan snapshot. Latest synced snapshot is also preserved.
-If you specify 1 for reserve, there will be at most 2 synced snapshots.
+purge will never delete orphan snapshot; There's a set of commands to operate on
+orphan snapshots, see "moobk orhpan". Latest synced snapshot is also preserved. If
+you specify 1 for reserve, there will be at most 2 synced snapshots.
 `,
 	ValidArgs: []string{"local", "remote", "reserve\t[0-9]+([hdwm])"},
 	Args:      cobra.RangeArgs(2, 3),
