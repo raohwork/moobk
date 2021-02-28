@@ -21,23 +21,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// repoCmd represents the repo command
-var repoCmd = &cobra.Command{
-	Use:   "repo",
-	Short: "Describes what 'repository' is",
-	Long:  `Show documentation about what "repository" is, what kind of repositories is supported, and its key behavier.`,
+var repoLocalCmd = &cobra.Command{
+	Use:   "local",
+	Short: "Describes local scheme, which accesses local repo",
+	Long: `local scheme is for repo hosted on the same machine you ran moobk.
+
+The path part depends on which fs driver you are using. For btrfs, it should be a
+folder managed by btrfs, like /btrfs_root/some_folder (or even /btrfs_root). For
+zfs, it should be a zfs volume, like rpool/some_volume.
+
+Here are few examples:
+  local:///btrfs/backup
+  local://rpool/backup
+  local:///rpool/backup   (leading spash is stripped when using zfs driver)
+
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Print(`moobk support snapshot management both locally and remotely. Snapshots are stored in "repository" which can vary in different fs driver. 
-
-All repos are specified in URL format: scheme://repo/location?option1=value1&option2=value2. Refer to specific scheme for more info about supported options.
-
-Driver options are pass through query string, too. Run "moobk driver" for more info.
-
-Run "moobk help repo" to see available drivers.
-`)
+		fmt.Print(cmd.Long)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(repoCmd)
+	repoCmd.AddCommand(repoLocalCmd)
 }
