@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os/exec"
 	"strings"
 )
@@ -66,9 +67,9 @@ type COW interface {
 	Recv(s Snapshot, r io.Reader) (err error)
 }
 
-var availableCOW = map[string]func() COW{}
+var availableCOW = map[string]func(opts url.Values) COW{}
 
-func addCOW(n string, f func() COW) {
+func addCOW(n string, f func(opts url.Values) COW) {
 	n = strings.ToLower(n)
 	_, ok := availableCOW[n]
 	if ok {
@@ -78,13 +79,13 @@ func addCOW(n string, f func() COW) {
 }
 
 // GetCOW retrieves a driver by its name
-func GetCOW(fs string) (ret COW, ok bool) {
+func GetCOW(fs string, opts url.Values) (ret COW, ok bool) {
 	x, ok := availableCOW[strings.ToLower(fs)]
 	if !ok {
 		return
 	}
 
-	return x(), ok
+	return x(opts), ok
 }
 
 // ErrUnsupportedFS indicates path/repo is not supported by the driver

@@ -29,8 +29,8 @@ func (l *localRunner) BackupPath() (ret string) { return l.backupPath }
 func (l *localRunner) RunnerName() (ret string) { return "local" }
 
 // run everything defined by COW, directly on local machine
-func newLocalRunner(uri *url.URL, fs string) (ret Runner, err error) {
-	cow, ok := GetCOW(fs)
+func newLocalRunner(uri *url.URL, fs string, opts url.Values) (ret Runner, err error) {
+	cow, ok := GetCOW(fs, opts)
 	if !ok {
 		err = errors.New("unsupported fs type: " + fs)
 		return

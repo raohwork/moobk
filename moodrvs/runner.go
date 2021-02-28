@@ -45,9 +45,9 @@ type Runner interface {
 	RunnerName() string
 }
 
-var availableRunner = map[string]func(*url.URL, string) (Runner, error){}
+var availableRunner = map[string]func(*url.URL, string, url.Values) (Runner, error){}
 
-func addRunner(n string, f func(*url.URL, string) (Runner, error)) {
+func addRunner(n string, f func(*url.URL, string, url.Values) (Runner, error)) {
 	n = strings.ToLower(n)
 	_, ok := availableRunner[n]
 	if ok {
@@ -97,5 +97,13 @@ func getRunner(u *url.URL, fs string) (ret Runner, err error) {
 		return
 	}
 
-	return x(u, fs)
+	// filter driver options
+	opts := map[string][]string{}
+	for k, v := range u.Query() {
+		if strings.HasPrefix(k, "drv_") {
+			opts[k[4:]] = v
+		}
+	}
+
+	return x(u, fs, opts)
 }

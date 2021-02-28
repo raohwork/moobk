@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -131,9 +132,14 @@ func (b *btrfs) Recv(s Snapshot, r io.Reader) (err error) {
 }
 
 func init() {
-	addCOW("btrfs", func() (ret COW) {
+	addCOW("btrfs", func(opts url.Values) (ret COW) {
+		bin := opts.Get("bin")
+		if bin == "" {
+			bin = "btrfs"
+		}
+
 		ret = &btrfs{
-			program:    program{prog: "btrfs"},
+			program:    program{prog: bin},
 			backupPath: "",
 		}
 		return

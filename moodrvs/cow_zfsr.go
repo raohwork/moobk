@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net/url"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -140,9 +141,13 @@ func (b *zfsr) Recv(s Snapshot, r io.Reader) (err error) {
 }
 
 func init() {
-	addCOW("zfsr", func() (ret COW) {
+	addCOW("zfsr", func(opts url.Values) (ret COW) {
+		bin := opts.Get("bin")
+		if bin == "" {
+			bin = "zfs"
+		}
 		ret = &zfsr{
-			program:    program{prog: "zfs"},
+			program:    program{prog: bin},
 			backupPath: "",
 		}
 		return
