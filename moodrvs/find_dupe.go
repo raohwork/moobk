@@ -16,7 +16,7 @@
 package moodrvs
 
 // FindDupe finds all snapsnhots exist in both l and r
-func FindDupe(l, r []Snapshot) (ret [][]Snapshot) {
+func FindDupe(l, r []Snapshot) (dupe, orphanL, orphanR [][]Snapshot) {
 	if len(l) < 1 {
 		return
 	}
@@ -32,39 +32,56 @@ func FindDupe(l, r []Snapshot) (ret [][]Snapshot) {
 	}
 
 	for k, s := range lGroup {
-		x := findDupe(s, rGroup[k])
-		if len(x) > 0 {
-			ret = append(ret, x)
+		d, ol, or := findDupe(s, rGroup[k])
+		if len(d) > 0 {
+			dupe = append(dupe, d)
+		}
+		if len(ol) > 0 {
+			orphanL = append(orphanL, ol)
+		}
+		if len(or) > 0 {
+			orphanR = append(orphanR, or)
 		}
 	}
 
 	return
 }
 
-func findDupe(l, r []Snapshot) (ret []Snapshot) {
-	if len(r) < 1 {
+func findDupe(ls, rs []Snapshot) (dupe, orphanL, orphanR []Snapshot) {
+	if len(rs) < 1 {
 		return
 	}
 
-	SnapshotSliceAsc(r).Sort()
-	for _, s := range l {
-		for _, x := range r {
-			if s.CreatedAt.Before(x.CreatedAt) {
+	ol := make([]Snapshot, 0, len(ls))
+	or := make([]Snapshot, 0, len(rs))
+
+	SnapshotSliceAsc(ls).Sort()
+	SnapshotSliceAsc(rs).Sort()
+	for _, l := range ls {
+		lts := l.CreatedAt.Unix()
+		for len(rs) > 0 {
+			rts := rs[0].CreatedAt.Unix()
+			if lts == rts {
+				dupe = append(dupe, l)
+				rs = rs[1:]
 				break
 			}
 
-			if s.CreatedAt.After(x.CreatedAt) {
-				continue
+			if lts < rts {
+				ol = append(ol, l)
+				break
 			}
 
-			ret = append(ret, s)
-			break
+			or = append(or, rs[0])
+			rs = rs[1:]
 		}
 	}
 
 	// remove latest
-	if l := len(ret); l > 0 {
-		ret = ret[:l-1]
+	if l := len(dupe); l > 0 {
+		dupe = dupe[:l-1]
+		orphanL = ol
+		orphanR = or
 	}
 	return
 }

@@ -26,21 +26,32 @@ import (
 // purgeCmd represents the purge command
 var purgeCmd = &cobra.Command{
 	Aliases: []string{"p", "d", "del", "delete", "rm", "remove"},
-	Use:     "purge local remote [reserve]",
+	Use:     "purge local remote",
 	Short:   "Purge snapshots from local according to remote",
 	Long: `purge deletes snapshots that exist in both local and remote.
 
-The argument "reserve" can be:
+The format of "reserve" flag can be:
     integer:       do not delete latest n snapshots.
     [0-9]+[hdwm]:  do not delete snapshots newer than n hour/day/week/month ago from
                    now.
 
-purge will never delete orphan snapshot; There's a set of commands to operate on
-orphan snapshots, see "moobk orhpan". Latest synced snapshot is also preserved. If
-you specify 1 for reserve, there will be at most 2 synced snapshots.
+Depends on existent in local and remote, a snapshot can be:
+
+    - Synced:  the snapshot exists in both repo
+    - Missing: exists in either local or remote (but not both), and "newer" than
+               latest synced snapshot
+    - Orphan:  exists in either local or remote (but not both), and "older" than
+               latest synced snapshot
+
+By default, purge deletes synced snapshots "on both local and remote", excepts
+latest one. You may use "reserve" flag to leave more synced snapshots untouched.
+Since latest synced snapshot is never purged, if you specify 1 for reserve flag,
+there will be at most 2 synced snapshots after.
+
+The "orphan" flag purges all orphan snapshots.
 `,
-	ValidArgs: []string{"local", "remote", "reserve\t[0-9]+([hdwm])"},
-	Args:      cobra.RangeArgs(2, 3),
+	ValidArgs: []string{"local", "remote"},
+	Args:      cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		local, err := moodrvs.GetRunner(args[0], fs)
 		if err != nil {
@@ -72,22 +83,28 @@ you specify 1 for reserve, there will be at most 2 synced snapshots.
 		cnt := uint(0)
 		dur := ""
 
-		if len(args) > 1 {
-			i, err := strconv.ParseUint(args[1], 10, 32)
+		if purgeFlags.Reserve != "" {
+			i, err := strconv.ParseUint(purgeFlags.Reserve, 10, 32)
 			if err == nil {
 				cnt = uint(i)
 			} else {
-				dur = args[1]
+				dur = purgeFlags.Reserve
 			}
 		}
-		dupes := moodrvs.FindDupe(lSnaps, rSnaps)
+		dupes, orphanL, orphanR := moodrvs.FindDupe(lSnaps, rSnaps)
 		for _, arr := range dupes {
 			arr = moodrvs.Reserve(arr, cnt, dur)
 			for _, d := range arr {
 				fmt.Printf(
-					"Deleting %s ... ",
+					"Deleting synced %s ... ",
 					d.RealName(),
 				)
+
+				if purgeFlags.DryRun {
+					fmt.Println("skipped.")
+					continue
+				}
+
 				if err := remote.Delete(d); err != nil {
 					fmt.Println("error.")
 					return fmt.Errorf(
@@ -108,19 +125,75 @@ you specify 1 for reserve, there will be at most 2 synced snapshots.
 			}
 		}
 
+		if !purgeFlags.Orphan {
+			return
+		}
+
+		for _, arr := range orphanL {
+			arr = moodrvs.Reserve(arr, cnt, dur)
+			for _, d := range arr {
+				fmt.Printf(
+					"Deleting orphan %s ... ",
+					d.RealName(),
+				)
+
+				if purgeFlags.DryRun {
+					fmt.Println("skipped.")
+					continue
+				}
+
+				if err := local.Delete(d); err != nil {
+					fmt.Println("error.")
+					return fmt.Errorf(
+						"cannot delete local snapshot: %w",
+						err,
+					)
+				}
+				fmt.Println("local.")
+			}
+		}
+
+		for _, arr := range orphanR {
+			arr = moodrvs.Reserve(arr, cnt, dur)
+			for _, d := range arr {
+				fmt.Printf(
+					"Deleting orphan %s ... ",
+					d.RealName(),
+				)
+
+				if purgeFlags.DryRun {
+					fmt.Println("skipped.")
+					continue
+				}
+
+				if err := remote.Delete(d); err != nil {
+					fmt.Println("error.")
+					return fmt.Errorf(
+						"cannot delete remote snapshot: %w",
+						err,
+					)
+				}
+				fmt.Println("remote. ")
+			}
+		}
+
 		return
 	},
 }
 
 var purgeFlags = struct {
-	repoFlags
-	Name string
+	Name    string
+	Reserve string
+	Orphan  bool
+	DryRun  bool
 }{}
 
 func init() {
 	rootCmd.AddCommand(purgeCmd)
 
-	purgeFlags.Bind(purgeCmd)
 	f := purgeCmd.Flags()
 	f.StringVarP(&purgeFlags.Name, "name", "n", "", "purges only snapshots with exactly same name")
+	f.StringVarP(&purgeFlags.Reserve, "reserve", "r", "", "reserves more snapshots")
+	f.BoolVarP(&purgeFlags.Orphan, "orphan", "o", false, "also deletes orphan snapshots")
+	f.BoolVarP(&purgeFlags.DryRun, "dry-run", "d", false, "do not really deletes snapshots")
 }
