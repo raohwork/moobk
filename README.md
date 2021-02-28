@@ -4,8 +4,10 @@ moobk is a CoW filesystem backup tool. Currently only btrfs/zfs are supported.
 
 # Install
 
-- `go get github.com/raohwork/moobk` if you have golang tools installed.
+- `go get github.com/raohwork/moobk` if you have golang tools installed. Or
 - Download from release page on GitHub.
+
+Make sure that fs-tools like `btrfs` or `zfs` are accessible. See "moobk driver" for detail.
 
 # Synopsis
 
