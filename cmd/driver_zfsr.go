@@ -21,29 +21,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// driverCmd represents the driver command
-var driverCmd = &cobra.Command{
-	Use:   "driver",
-	Short: "Describes what 'driver' is",
-	Long:  `Show documentation about what "driver" is.`,
+var driverZfsRCmd = &cobra.Command{
+	Use:   "zfs",
+	Short: "Describes zfsr driver, a zfs driver enables recursive snapshotting",
+	Long: `zfsr driver is roughly same with zfs driver, but always takes snapshots recusively.
+
+All pros, cons and options of zfs driver applies to this driver. The only difference
+is:
+
+- It invokes "zfs snapshot" with "-r" flag when taking snapshot.
+- It invokes "zfs destroy" with  "-r" flag when deleting snapshot.
+- It invokes "zfs send" with "-R" flag when sending snapshot.
+
+See zfs driver document for more info.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Print(`moobk abstracts whole backup procedure into few actions:
-
-- test:   Tests if specified target can be managed by this driver.
-- create: Creates a new snapshot.
-- list:   Lists snapshots.
-- delete: Deletes a snapshot.
-- send:   Sends a snapshot to somewhere.
-- recv:   Receives a snapshot from somewhere.
-
-A driver is piece of code to execute these actions on something. Like, btrfs driver
-can take snapshot on a btrfs filesystem.
-
-Run "moobk help driver" to see supported drivers.
-`)
+		fmt.Print(cmd.Long)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(driverCmd)
+	driverCmd.AddCommand(driverZfsRCmd)
 }
