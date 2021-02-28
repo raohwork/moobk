@@ -117,14 +117,7 @@ func (b *zfs) Send(base, s Snapshot, w io.Writer) (err error) {
 		if e != nil {
 			return e
 		}
-		if err = cmd.Start(); err != nil {
-			return
-		}
-		_, err = io.Copy(w, r)
-		if err != nil {
-			return
-		}
-		return cmd.Wait()
+		return sendHelper(cmd, w, r)
 	}
 
 	from := b.backupPath + "@" + base.RealName()
@@ -132,14 +125,7 @@ func (b *zfs) Send(base, s Snapshot, w io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	if err = cmd.Start(); err != nil {
-		return
-	}
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return
-	}
-	return cmd.Wait()
+	return sendHelper(cmd, w, r)
 }
 
 func (b *zfs) Recv(s Snapshot, r io.Reader) (err error) {

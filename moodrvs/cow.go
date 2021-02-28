@@ -16,8 +16,11 @@
 package moodrvs
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"log"
+	"os/exec"
 	"strings"
 )
 
@@ -89,4 +92,29 @@ type ErrUnsupportedFS string
 
 func (e ErrUnsupportedFS) Error() string {
 	return "moodrvs: unsupported filesystem: " + string(e)
+}
+
+func sendHelper(cmd *exec.Cmd, w io.Writer, r io.Reader) (err error) {
+	ebuf := &bytes.Buffer{}
+	cmd.Stderr = ebuf
+	if err = cmd.Start(); err != nil {
+		if ebuf.Len() > 0 {
+			err = fmt.Errorf("%w: %s", err, ebuf.String())
+		}
+		return
+	}
+	_, err = io.Copy(w, r)
+	if err != nil {
+		if ebuf.Len() > 0 {
+			err = fmt.Errorf("%w: %s", err, ebuf.String())
+		}
+		return fmt.Errorf("cannot send data: %w", err)
+	}
+	if err = cmd.Wait(); err != nil {
+		if ebuf.Len() > 0 {
+			err = fmt.Errorf("%w: %s", err, ebuf.String())
+		}
+	}
+
+	return
 }

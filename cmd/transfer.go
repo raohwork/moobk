@@ -61,7 +61,12 @@ var transferCmd = &cobra.Command{
 
 		diffs := moodrvs.Diff(lSnaps, rSnaps)
 		for _, diff := range diffs {
-			transfer(local, remote, diff)
+			err = transfer(local, remote, diff)
+			if err != nil {
+				fmt.Println()
+				fmt.Println(err)
+				return nil
+			}
 		}
 
 		return
@@ -81,7 +86,7 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 
 	for idx, s := range diff.Missing {
 		fmt.Printf(
-			"Sending %s ~ %s from %s://%s to %s://%s\n",
+			"Sending %s ~ %s from %s://%s to %s://%s ... ",
 			base.RealName(),
 			s.RealName(),
 			lRepo.RunnerName(),
@@ -106,22 +111,17 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 		}()
 		wg.Wait()
 
-		ok := true
 		if werr != nil {
-			ok = false
-			fmt.Println("Error sending snapshot: ", werr)
-			err = werr
+			err = fmt.Errorf("cannot send snapshot: %w", werr)
+			return
 		}
 		if rerr != nil {
-			ok = false
-			fmt.Println("Error sending snapshot: ", rerr)
-			err = rerr
-		}
-		if !ok {
+			err = fmt.Errorf("cannot receive snapshot: %w", rerr)
 			return
 		}
 
 		base = &diff.Missing[idx]
+		fmt.Println("done.")
 	}
 
 	return
