@@ -16,9 +16,12 @@
 package moodrvs
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -35,6 +38,7 @@ func (b *btrfs) SetRepo(path string) (ok bool) { b.backupPath = path; return tru
 func (b *btrfs) Snapshots() (ret []Snapshot, err error) {
 	maybe, err := filepath.Glob(b.backupPath + "/*-[0-9]*")
 	if err != nil {
+		err = fmt.Errorf("cannot list snapshots in %s: %w", b.backupPath, err)
 		return
 	}
 
@@ -49,6 +53,9 @@ func (b *btrfs) Snapshots() (ret []Snapshot, err error) {
 	return
 }
 
+const btrfsNotFS = "not a btrfs filesystem"
+const btrfsNotFound = "no such file or directory"
+
 // use btrfs subvolume show to see if it is a btrfs subvolume
 func (b *btrfs) Test(path string) (yes bool, err error) {
 	_, err = b.basicRun("sub", "show", path)
@@ -56,8 +63,16 @@ func (b *btrfs) Test(path string) (yes bool, err error) {
 		return true, nil
 	}
 
-	if _, ok := err.(*exec.ExitError); ok {
-		return false, nil
+	var e *exec.ExitError
+	if errors.As(err, &e) {
+		// check error message
+		str := strings.ToLower(err.Error())
+		if strings.Contains(str, btrfsNotFS) {
+			return false, nil
+		}
+		if strings.Contains(str, btrfsNotFound) {
+			return false, nil
+		}
 	}
 
 	return

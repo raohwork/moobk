@@ -70,7 +70,8 @@ func (b *zfs) Test(path string) (yes bool, err error) {
 
 	buf, err := b.basicRun("get", "-H", "type", path)
 	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
+		var e *exec.ExitError
+		if errors.As(err, &e) {
 			return false, nil
 		}
 		return

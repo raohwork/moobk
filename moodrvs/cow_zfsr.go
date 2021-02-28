@@ -65,13 +65,14 @@ func (b *zfsr) Snapshots() (ret []Snapshot, err error) {
 // use zfs get type to test if path is a zfs filesystem, since zfs clone is not supported
 func (b *zfsr) Test(path string) (yes bool, err error) {
 	if path != b.backupPath {
-		err = errors.New("ZFSR does not support putting snapshot under different filesystem")
+		err = errors.New("ZFS does not support putting snapshot under different filesystem")
 		return
 	}
 
 	buf, err := b.basicRun("get", "-H", "type", path)
 	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
+		var e *exec.ExitError
+		if errors.As(err, &e) {
 			return false, nil
 		}
 		return
