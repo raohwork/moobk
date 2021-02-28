@@ -95,6 +95,11 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 			rRepo.BackupPath(),
 		)
 
+		if transferFlags.DryRun {
+			fmt.Println("skipped.")
+			continue
+		}
+
 		r, w := io.Pipe()
 		var rerr, werr error
 		wg := sync.WaitGroup{}
@@ -128,11 +133,13 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 }
 
 var transferFlags = struct {
-	Name string
+	Name   string
+	DryRun bool
 }{}
 
 func init() {
 	rootCmd.AddCommand(transferCmd)
 
 	transferCmd.Flags().StringVarP(&transferFlags.Name, "name", "n", "", "optional filter. Transfers only matching snapshot")
+	transferCmd.Flags().BoolVarP(&transferFlags.DryRun, "dry-run", "d", false, "do not send/receive snapshot")
 }
