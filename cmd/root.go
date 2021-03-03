@@ -57,7 +57,7 @@ moobk is free software: it is distributed in the hope that it will be useful, bu
 
 `,
 	SuggestionsMinimumDistance: 3,
-	Version:                    "0.0.1",
+	Version:                    "0.0.2",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		loadAliases()
 	},
