@@ -141,8 +141,8 @@ func buildSSHOpt(uri *url.URL) (sshOpts []string) {
 }
 
 // use moobk as wrapper on remote machine, and use ssh to execute it.
-func newSSHRunner(uri *url.URL, fs string) (ret *sshRunner, err error) {
-	cow, ok := GetCOW(fs)
+func newSSHRunner(uri *url.URL, fs string, opts url.Values) (ret *sshRunner, err error) {
+	cow, ok := GetCOW(fs, opts)
 	if !ok {
 		err = errors.New("unsupported fs type: " + fs)
 		return
@@ -173,11 +173,11 @@ func newSSHRunner(uri *url.URL, fs string) (ret *sshRunner, err error) {
 }
 
 func init() {
-	addRunner("ssh", func(uri *url.URL, fs string) (ret Runner, err error) {
-		return newSSHRunner(uri, fs)
+	addRunner("ssh", func(uri *url.URL, fs string, opts url.Values) (ret Runner, err error) {
+		return newSSHRunner(uri, fs, opts)
 	})
-	addRunner("ssh+sudo", func(uri *url.URL, fs string) (ret Runner, err error) {
-		x, err := newSSHRunner(uri, fs)
+	addRunner("ssh+sudo", func(uri *url.URL, fs string, opts url.Values) (ret Runner, err error) {
+		x, err := newSSHRunner(uri, fs, opts)
 		if err != nil {
 			return
 		}

@@ -16,6 +16,8 @@
 package moodrvs
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"os/exec"
 )
@@ -30,7 +32,17 @@ func (p *program) exec(args ...string) (ret *exec.Cmd) {
 }
 
 func (p *program) basicRun(args ...string) (data []byte, err error) {
-	return p.exec(args...).CombinedOutput()
+	cmd := p.exec(args...)
+	obuf, ebuf := &bytes.Buffer{}, &bytes.Buffer{}
+	cmd.Stdout = obuf
+	cmd.Stderr = ebuf
+	err = cmd.Run()
+	if err != nil {
+		err = fmt.Errorf("%w: %s", err, ebuf.String())
+		return
+	}
+	data = obuf.Bytes()
+	return
 }
 
 func (p *program) forRecv(r io.Reader, args ...string) (ret *exec.Cmd) {

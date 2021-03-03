@@ -21,29 +21,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// driverCmd represents the driver command
-var driverCmd = &cobra.Command{
-	Use:   "driver",
-	Short: "Describes what 'driver' is",
-	Long:  `Show documentation about what "driver" is.`,
+var repoLocalCmd = &cobra.Command{
+	Use:   "local",
+	Short: "Describes local scheme, which accesses local repo",
+	Long: `local scheme is for repo hosted on the same machine you ran moobk.
+
+The path part depends on which fs driver you are using. For btrfs, it should be a
+folder managed by btrfs, like /btrfs_root/some_folder (or even /btrfs_root). For
+zfs, it should be a zfs volume, like rpool/some_volume.
+
+Here are few examples:
+  local:///btrfs/backup
+  local://rpool/backup
+  local:///rpool/backup   (leading spash is stripped when using zfs driver)
+
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Print(`moobk abstracts whole backup procedure into few actions:
-
-- test:   Tests if specified target can be managed by this driver.
-- create: Creates a new snapshot.
-- list:   Lists snapshots.
-- delete: Deletes a snapshot.
-- send:   Sends a snapshot to somewhere.
-- recv:   Receives a snapshot from somewhere.
-
-A driver is piece of code to execute these actions on something. Like, btrfs driver
-can take snapshot on a btrfs filesystem.
-
-Run "moobk help driver" to see supported drivers.
-`)
+		fmt.Print(cmd.Long)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(driverCmd)
+	repoCmd.AddCommand(repoLocalCmd)
 }

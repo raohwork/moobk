@@ -32,13 +32,13 @@ var rootCmd = &cobra.Command{
 
 moobk aims to help you automating daily backup work with ease. It's roughly a frontend of zfs/btrfs. Say you have a laptop with two btrfs subvolumes mounted at root and /home, and an btrfs-formatted external storage. You may periodically run this to take snapshot (like, hourly):
 
-  moobk snap -t btrfs -r local:///.backup / rootfs
-  moobk snap -t btrfs -r local:///.backup /home
+  moobk snap local:///.backup / rootfs
+  moobk snap local:///.backup /home
 
 Then, write an udev rule to transfer new snapshots to external storage (and delete snapshots older than 2 weeks) when plugged
 
-  moobk sync -t btrfs -r local:///.root.backup local:///path/to/external/storage
-  moobk purge -t btrfs -r local:///.root.backup local:///path/to/external/storage 2w
+  moobk transfer local:///.root.backup local:///path/to/external/storage
+  moobk purge local:///.root.backup local:///path/to/external/storage 2w
 
 Those are long lines suitable for scripts which only write once. If you like to run it manually (like, for testing), moobk supports repo alias. Create a file named ".moobk.yaml" in your home directory (or /root if you run moobk with sudo) with following lines
 
@@ -48,8 +48,8 @@ usb: local:///path/to/usb/backup
 
 Then you can run
 
-  moobk list -r me     # equals to moobk list -r local:///path/to/local/backup
-  moobk sync -r me nas
+  moobk list me     # equals to moobk list local:///path/to/local/backup
+  moobk sync me nas
 
 To get some idea about what "repo" is, run "moobk repo". You might also want to try "moobk driver".
 
@@ -57,7 +57,7 @@ moobk is free software: it is distributed in the hope that it will be useful, bu
 
 `,
 	SuggestionsMinimumDistance: 3,
-	Version:                    "0.0.1",
+	Version:                    "0.0.2",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		loadAliases()
 	},
@@ -70,10 +70,13 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&aliasFile, "alias", "a", "", "specify yaml file stores repo alias, default to $HOME/.moobk.yaml (watchout if use with sudo)")
+	f := rootCmd.PersistentFlags()
+	f.StringVarP(&aliasFile, "alias", "a", "", "specify yaml file stores repo alias, default to $HOME/.moobk.yaml (watchout if use with sudo)")
+	f.StringVarP(&fs, "type", "t", "btrfs", "driver type, see 'moobk driver' for detail")
 }
 
 var aliasFile string
+var fs string
 
 // skip if failed
 func loadAliases() {

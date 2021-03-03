@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"net/url"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -70,7 +71,8 @@ func (b *zfs) Test(path string) (yes bool, err error) {
 
 	buf, err := b.basicRun("get", "-H", "type", path)
 	if err != nil {
-		if _, ok := err.(*exec.ExitError); ok {
+		var e *exec.ExitError
+		if errors.As(err, &e) {
 			return false, nil
 		}
 		return
@@ -116,14 +118,7 @@ func (b *zfs) Send(base, s Snapshot, w io.Writer) (err error) {
 		if e != nil {
 			return e
 		}
-		if err = cmd.Start(); err != nil {
-			return
-		}
-		_, err = io.Copy(w, r)
-		if err != nil {
-			return
-		}
-		return cmd.Wait()
+		return sendHelper(cmd, w, r)
 	}
 
 	from := b.backupPath + "@" + base.RealName()
@@ -131,14 +126,7 @@ func (b *zfs) Send(base, s Snapshot, w io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	if err = cmd.Start(); err != nil {
-		return
-	}
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return
-	}
-	return cmd.Wait()
+	return sendHelper(cmd, w, r)
 }
 
 func (b *zfs) Recv(s Snapshot, r io.Reader) (err error) {
@@ -148,9 +136,13 @@ func (b *zfs) Recv(s Snapshot, r io.Reader) (err error) {
 }
 
 func init() {
-	addCOW("zfs", func() (ret COW) {
+	addCOW("zfs", func(opts url.Values) (ret COW) {
+		bin := opts.Get("bin")
+		if bin == "" {
+			bin = "zfs"
+		}
 		ret = &zfs{
-			program:    program{prog: "zfs"},
+			program:    program{prog: bin},
 			backupPath: "",
 		}
 		return

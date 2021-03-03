@@ -21,10 +21,12 @@ import (
 )
 
 type findDupeTestCase struct {
-	name   string
-	l      []Snapshot
-	r      []Snapshot
-	expect []Snapshot
+	name string
+	l    []Snapshot
+	r    []Snapshot
+	dupe []Snapshot
+	ls   []Snapshot
+	rs   []Snapshot
 }
 
 func (s *findDupeTestCase) cmpSlice(a, b []Snapshot) bool {
@@ -42,16 +44,34 @@ func (s *findDupeTestCase) cmpSlice(a, b []Snapshot) bool {
 }
 
 func (s *findDupeTestCase) cmp(d []Snapshot) bool {
-	return s.cmpSlice(s.expect, d)
+	return s.cmpSlice(s.dupe, d)
 }
 
 func (s *findDupeTestCase) Run(t *testing.T) {
-	actual := findDupe(s.l, s.r)
-	if !s.cmp(actual) {
-		t.Logf("expect: %+v", s.expect)
-		t.Logf("actual: %+v", actual)
-		t.Fatal("unexpected result")
-	}
+	dupes, ol, or := findDupe(s.l, s.r)
+	t.Run("dupe", func(t *testing.T) {
+		if !s.cmp(dupes) {
+			t.Logf("expect: %+v", s.dupe)
+			t.Logf("actual: %+v", dupes)
+			t.Fatal("unexpected result")
+		}
+	})
+
+	t.Run("local-orphan", func(t *testing.T) {
+		if !s.cmpSlice(s.ls, ol) {
+			t.Logf("expect: %+v", s.dupe)
+			t.Logf("actual: %+v", dupes)
+			t.Fatal("unexpected result")
+		}
+	})
+
+	t.Run("remote-orphan", func(t *testing.T) {
+		if !s.cmpSlice(s.rs, or) {
+			t.Logf("expect: %+v", s.dupe)
+			t.Logf("actual: %+v", dupes)
+			t.Fatal("unexpected result")
+		}
+	})
 }
 
 func TestFindDupe(t *testing.T) {
@@ -68,64 +88,87 @@ func TestFindDupe(t *testing.T) {
 	}
 	cases := []findDupeTestCase{
 		{
-			name:   "empty_r",
-			l:      []Snapshot{d[0]},
-			r:      []Snapshot{},
-			expect: []Snapshot{},
+			name: "empty_r",
+			l:    []Snapshot{d[0]},
+			r:    []Snapshot{},
+			dupe: []Snapshot{},
 		},
 		{
-			name:   "l_newer",
-			l:      []Snapshot{d[0], d[1], d[2]},
-			r:      []Snapshot{d[0], d[1]},
-			expect: []Snapshot{d[0]},
+			name: "l_newer",
+			l:    []Snapshot{d[0], d[1], d[2]},
+			r:    []Snapshot{d[0], d[1]},
+			dupe: []Snapshot{d[0]},
 		},
 		{
-			name:   "r_newer",
-			l:      []Snapshot{d[0], d[1]},
-			r:      []Snapshot{d[0], d[1], d[2]},
-			expect: []Snapshot{d[0]},
+			name: "r_newer",
+			l:    []Snapshot{d[0], d[1]},
+			r:    []Snapshot{d[0], d[1], d[2]},
+			dupe: []Snapshot{d[0]},
 		},
 		{
-			name:   "synced-one",
-			l:      []Snapshot{d[0], d[1]},
-			r:      []Snapshot{d[1]},
-			expect: []Snapshot{},
+			name: "synced-one",
+			l:    []Snapshot{d[0], d[1]},
+			r:    []Snapshot{d[1]},
+			dupe: []Snapshot{},
+			ls:   []Snapshot{d[0]},
 		},
 		{
-			name:   "synced",
-			l:      []Snapshot{d[0], d[1]},
-			r:      []Snapshot{d[0], d[1]},
-			expect: []Snapshot{d[0]},
+			name: "synced",
+			l:    []Snapshot{d[0], d[1]},
+			r:    []Snapshot{d[0], d[1]},
+			dupe: []Snapshot{d[0]},
 		},
 		{
-			name:   "synced-only",
-			l:      []Snapshot{d[1]},
-			r:      []Snapshot{d[1]},
-			expect: []Snapshot{},
+			name: "synced-only",
+			l:    []Snapshot{d[1]},
+			r:    []Snapshot{d[1]},
+			dupe: []Snapshot{},
 		},
 		{
-			name:   "findDupeerent_r_newer",
-			l:      []Snapshot{d[0]},
-			r:      []Snapshot{d[1]},
-			expect: []Snapshot{},
+			name: "different_r_newer",
+			l:    []Snapshot{d[0]},
+			r:    []Snapshot{d[1]},
+			dupe: []Snapshot{},
 		},
 		{
-			name:   "findDupeerent_l_newer",
-			l:      []Snapshot{d[1]},
-			r:      []Snapshot{d[0]},
-			expect: []Snapshot{},
+			name: "different_l_newer",
+			l:    []Snapshot{d[1]},
+			r:    []Snapshot{d[0]},
+			dupe: []Snapshot{},
 		},
 		{
-			name:   "chaos_zebra_l_newer",
-			l:      []Snapshot{d[0], d[2], d[4]},
-			r:      []Snapshot{d[1], d[3]},
-			expect: []Snapshot{},
+			name: "chaos_zebra_l_newer",
+			l:    []Snapshot{d[0], d[2], d[4]},
+			r:    []Snapshot{d[1], d[3]},
+			dupe: []Snapshot{},
 		},
 		{
-			name:   "chaos_zebra_r_newer",
-			l:      []Snapshot{d[1], d[3]},
-			r:      []Snapshot{d[0], d[2], d[4]},
-			expect: []Snapshot{},
+			name: "chaos_zebra_r_newer",
+			l:    []Snapshot{d[1], d[3]},
+			r:    []Snapshot{d[0], d[2], d[4]},
+			dupe: []Snapshot{},
+		},
+		{
+			name: "orphan_local",
+			l:    []Snapshot{d[0], d[1]},
+			r:    []Snapshot{d[1], d[2]},
+			dupe: []Snapshot{},
+			ls:   []Snapshot{d[0]},
+		},
+		{
+			name: "orphan_remote",
+			l:    []Snapshot{d[1], d[2]},
+			r:    []Snapshot{d[0], d[1]},
+			dupe: []Snapshot{},
+			rs:   []Snapshot{d[0]},
+		},
+		{
+			name: "orphan_both",
+			l:    []Snapshot{d[1], d[2], d[3]},
+			r:    []Snapshot{d[0], d[2]},
+			dupe: []Snapshot{},
+			ls:   []Snapshot{d[1]},
+			rs:   []Snapshot{d[0]},
 		},
 	}
 

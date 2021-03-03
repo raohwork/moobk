@@ -24,21 +24,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// syncCmd represents the list command
-var syncCmd = &cobra.Command{
-	Aliases:   []string{"send", "t", "trans", "transfer", "s"},
-	Use:       "sync remote",
+// transferCmd represents the list command
+var transferCmd = &cobra.Command{
+	Aliases:   []string{"t", "trans", "sync", "send", "s"},
+	Use:       "transfer local remote",
 	Short:     "Transfers local snapshots to remote",
-	Long:      `sync send snapshots that exist in local but missing in remote.`,
-	ValidArgs: []string{"remote"},
-	Args:      cobra.ExactArgs(1),
+	Long:      `transfer snapshots that exist in local but missing in remote.`,
+	ValidArgs: []string{"local", "remote"},
+	Args:      cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		local, err := syncFlags.Repo()
+		local, err := moodrvs.GetRunner(args[0], fs)
 		if err != nil {
 			return fmt.Errorf("cannot init local repo: %w", err)
 		}
 
-		remote, err := moodrvs.GetRunner(args[0], local.DriverName())
+		remote, err := moodrvs.GetRunner(args[1], fs)
 		if err != nil {
 			return fmt.Errorf("cannot init remote repo: %w", err)
 		}
@@ -47,7 +47,7 @@ var syncCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("cannot gather snapshot info in local: %w", err)
 		}
-		lSnaps = moodrvs.Filter(lSnaps, syncFlags.Name, 0, "")
+		lSnaps = moodrvs.Filter(lSnaps, transferFlags.Name, 0, "")
 		if len(lSnaps) == 0 {
 			// nothing to do
 			return
@@ -57,11 +57,16 @@ var syncCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("cannot gather snapshot info in remote: %w", err)
 		}
-		rSnaps = moodrvs.Filter(rSnaps, syncFlags.Name, 0, "")
+		rSnaps = moodrvs.Filter(rSnaps, transferFlags.Name, 0, "")
 
 		diffs := moodrvs.Diff(lSnaps, rSnaps)
 		for _, diff := range diffs {
-			transfer(local, remote, diff)
+			err = transfer(local, remote, diff)
+			if err != nil {
+				fmt.Println()
+				fmt.Println(err)
+				return nil
+			}
 		}
 
 		return
@@ -81,7 +86,7 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 
 	for idx, s := range diff.Missing {
 		fmt.Printf(
-			"Sending %s ~ %s from %s://%s to %s://%s\n",
+			"Sending %s ~ %s from %s://%s to %s://%s ... ",
 			base.RealName(),
 			s.RealName(),
 			lRepo.RunnerName(),
@@ -89,6 +94,11 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 			rRepo.RunnerName(),
 			rRepo.BackupPath(),
 		)
+
+		if transferFlags.DryRun {
+			fmt.Println("skipped.")
+			continue
+		}
 
 		r, w := io.Pipe()
 		var rerr, werr error
@@ -106,35 +116,30 @@ func transfer(lRepo, rRepo moodrvs.Runner, diff moodrvs.SnapshotDiff) (err error
 		}()
 		wg.Wait()
 
-		ok := true
 		if werr != nil {
-			ok = false
-			fmt.Println("Error sending snapshot: ", werr)
-			err = werr
+			err = fmt.Errorf("cannot send snapshot: %w", werr)
+			return
 		}
 		if rerr != nil {
-			ok = false
-			fmt.Println("Error sending snapshot: ", rerr)
-			err = rerr
-		}
-		if !ok {
+			err = fmt.Errorf("cannot receive snapshot: %w", rerr)
 			return
 		}
 
 		base = &diff.Missing[idx]
+		fmt.Println("done.")
 	}
 
 	return
 }
 
-var syncFlags = struct {
-	repoFlags
-	Name string
+var transferFlags = struct {
+	Name   string
+	DryRun bool
 }{}
 
 func init() {
-	rootCmd.AddCommand(syncCmd)
+	rootCmd.AddCommand(transferCmd)
 
-	syncFlags.Bind(syncCmd)
-	syncCmd.Flags().StringVarP(&syncFlags.Name, "name", "n", "", "optional filter. Sends only matching snapshot")
+	transferCmd.Flags().StringVarP(&transferFlags.Name, "name", "n", "", "optional filter. Transfers only matching snapshot")
+	transferCmd.Flags().BoolVarP(&transferFlags.DryRun, "dry-run", "d", false, "do not send/receive snapshot")
 }

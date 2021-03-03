@@ -16,9 +16,13 @@
 package moodrvs
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"net/url"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -35,6 +39,7 @@ func (b *btrfs) SetRepo(path string) (ok bool) { b.backupPath = path; return tru
 func (b *btrfs) Snapshots() (ret []Snapshot, err error) {
 	maybe, err := filepath.Glob(b.backupPath + "/*-[0-9]*")
 	if err != nil {
+		err = fmt.Errorf("cannot list snapshots in %s: %w", b.backupPath, err)
 		return
 	}
 
@@ -49,6 +54,9 @@ func (b *btrfs) Snapshots() (ret []Snapshot, err error) {
 	return
 }
 
+const btrfsNotFS = "not a btrfs filesystem"
+const btrfsNotFound = "no such file or directory"
+
 // use btrfs subvolume show to see if it is a btrfs subvolume
 func (b *btrfs) Test(path string) (yes bool, err error) {
 	_, err = b.basicRun("sub", "show", path)
@@ -56,8 +64,16 @@ func (b *btrfs) Test(path string) (yes bool, err error) {
 		return true, nil
 	}
 
-	if _, ok := err.(*exec.ExitError); ok {
-		return false, nil
+	var e *exec.ExitError
+	if errors.As(err, &e) {
+		// check error message
+		str := strings.ToLower(err.Error())
+		if strings.Contains(str, btrfsNotFS) {
+			return false, nil
+		}
+		if strings.Contains(str, btrfsNotFound) {
+			return false, nil
+		}
 	}
 
 	return
@@ -97,14 +113,7 @@ func (b *btrfs) Send(base, s Snapshot, w io.Writer) (err error) {
 		if e != nil {
 			return e
 		}
-		if err = cmd.Start(); err != nil {
-			return
-		}
-		_, err = io.Copy(w, r)
-		if err != nil {
-			return
-		}
-		return cmd.Wait()
+		return sendHelper(cmd, w, r)
 	}
 
 	from := b.backupPath + "/" + base.RealName()
@@ -112,14 +121,7 @@ func (b *btrfs) Send(base, s Snapshot, w io.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	if err = cmd.Start(); err != nil {
-		return
-	}
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return
-	}
-	return cmd.Wait()
+	return sendHelper(cmd, w, r)
 }
 
 // btrfs receive, stay cool
@@ -130,9 +132,14 @@ func (b *btrfs) Recv(s Snapshot, r io.Reader) (err error) {
 }
 
 func init() {
-	addCOW("btrfs", func() (ret COW) {
+	addCOW("btrfs", func(opts url.Values) (ret COW) {
+		bin := opts.Get("bin")
+		if bin == "" {
+			bin = "btrfs"
+		}
+
 		ret = &btrfs{
-			program:    program{prog: "btrfs"},
+			program:    program{prog: bin},
 			backupPath: "",
 		}
 		return
